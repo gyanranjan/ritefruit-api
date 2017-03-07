@@ -2,25 +2,30 @@ package models
 
 import (
 	"errors"
-	"strconv"
 	"time"
-)
-
-var (
-	UserList map[string]*User
+	"gopkg.in/mgo.v2/bson"
+	"ritefruit-api/models/db"
 )
 
 func init() {
-	UserList = make(map[string]*User)
-	u := User{"user_11111", "astaxie", "11111", Profile{"male", 20, "Singapore", "astaxie@gmail.com"}}
-	UserList["user_11111"] = &u
+
+}
+
+func newUsersCollection() *db.Collection {
+	return db.NewCollectionSession("users")
 }
 
 type User struct {
-	Id       string
-	Username string
-	Password string
-	Profile  Profile
+	ID bson.ObjectId `json:"id" bson:"_id"`
+	UserName string `json:"username" bson:"username"`
+	Password string `json:"password" bson:"password"`
+	FirstName string `json:"firstname" bson:"firstname"`
+	LasttName string `json:"lastname" bson:"lastname"`
+	RefCount  int    `json:"refcount" bson:"refcount"`
+	EmailId  int    `json:"email-id" bson:"email-id"`
+	CreatedAt time.Time `json:"created_at,omitempty" bson:"created_at"`
+	UpdatedAt time.Time `json:"updated_at,omitempty" bson:"updated_at"`
+
 }
 
 type Profile struct {
@@ -31,56 +36,85 @@ type Profile struct {
 }
 
 func AddUser(u User) string {
-	u.Id = "user_" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	UserList[u.Id] = &u
-	return u.Id
+	u.ID = bson.NewObjectId()
+	u.CreatedAt = time.Now()
+	u.UpdatedAt = time.Now()
+	u.RefCount = 0
+
+	// Get post collection connection
+	c := newUsersCollection()
+	defer c.Close()
+
+	err := c.Session.Insert(&u)
+
+	if err != nil {
+		return "not created"
+	}
+	return u.ID.String()
 }
 
-func GetUser(uid string) (u *User, err error) {
-	if u, ok := UserList[uid]; ok {
-		return u, nil
+func GetUser(uid string) (User, error) {
+	var (
+		err error
+		u User
+	)
+	uId := bson.ObjectIdHex(uid)
+	// Get post collection connection
+	c := newUsersCollection()
+	defer c.Close()
+	// get post
+	err = c.Session.FindId(uId).One(&u)
+	if err != nil {
+		return u,err
 	}
 	return nil, errors.New("User not exists")
 }
 
-func GetAllUsers() map[string]*User {
-	return UserList
+func GetAllUsers() ([]User) {
+	var (
+		//err error
+		u []User
+	)
+	// Get post collection connection
+	c := newUsersCollection()
+	defer c.Close()
+	//err =
+		c.Session.Find(bson.M{}).All(&u)
+	return u
 }
 
-func UpdateUser(uid string, uu *User) (a *User, err error) {
-	if u, ok := UserList[uid]; ok {
-		if uu.Username != "" {
-			u.Username = uu.Username
-		}
-		if uu.Password != "" {
-			u.Password = uu.Password
-		}
-		if uu.Profile.Age != 0 {
-			u.Profile.Age = uu.Profile.Age
-		}
-		if uu.Profile.Address != "" {
-			u.Profile.Address = uu.Profile.Address
-		}
-		if uu.Profile.Gender != "" {
-			u.Profile.Gender = uu.Profile.Gender
-		}
-		if uu.Profile.Email != "" {
-			u.Profile.Email = uu.Profile.Email
-		}
-		return u, nil
+func UpdateUser(uID bson.ObjectId, uu *User) (*User,  error) {
+	var (
+		err error
+		u *User
+	)
+	// Get post collection connection
+	c := newUsersCollection()
+	defer c.Close()
+	// get post
+	err = c.Session.FindId(uID).One(&u)
+	if err != nil {
+		//FIXME do update properly
+		return u,err
 	}
-	return nil, errors.New("User Not Exist")
+	return nil, errors.New("User not exists")
 }
 
 func Login(username, password string) bool {
-	for _, u := range UserList {
-		if u.Username == username && u.Password == password {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
-func DeleteUser(uid string) {
-	delete(UserList, uid)
+func DeleteUser(uID bson.ObjectId) (error){
+	var (
+		err error
+	)
+	// Get post collection connection
+	c := newUsersCollection()
+	defer c.Close()
+	// remove post
+	err = c.Session.Remove(bson.M{"_id": uID})
+	if err != nil {
+		return err
+	}
+	return err
 }

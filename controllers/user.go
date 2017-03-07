@@ -25,7 +25,6 @@ func (u *UserController) Post() {
 	u.Data["json"] = map[string]string{"uid": uid}
 	u.ServeJSON()
 }
-
 // @Title GetAll
 // @Description get all Users
 // @Success 200 {object} models.User
