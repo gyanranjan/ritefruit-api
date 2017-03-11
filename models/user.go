@@ -24,7 +24,7 @@ type User struct {
 	RefCount  int    `json:"refcount" bson:"refcount"`
 	EmailId  int    `json:"email-id" bson:"email-id"`
 	CreatedAt time.Time `json:"created_at,omitempty" bson:"created_at"`
-	UpdatedAt time.Time `json:"updated_at,omitempty" bson:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at,omitempty" bson:"updated_adt"`
 
 }
 
